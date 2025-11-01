@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Misha Mel — Official</title>
+<style>
+  :root{--card-bg:rgba(0,0,0,0.66);--accent:#ffd966}
+  html,body{height:100%;margin:0;font-family:Inter,Arial,Helvetica,sans-serif;background:url("https://s3.iimg.su/s/01/gIf69VCxEcZlakaim0SAyPKSqc0lF8gVzf3nnRuW.jpg") center/cover no-repeat fixed;color:#fff;display:flex;align-items:center;justify-content:center}
+  .card{width:92%;max-width:760px;background:var(--card-bg);padding:22px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.5);backdrop-filter: blur(4px)}
+  header{display:flex;gap:14px;align-items:center}
+  .avatar{width:84px;height:84px;border-radius:8px;flex:0 0 84px;overflow:hidden;border:2px solid rgba(255,255,255,0.06)}
+  .avatar img{width:100%;height:100%;object-fit:cover;display:block}
+  h1{font-size:20px;margin:0 0 2px 0}
+  p.lead{margin:0;color:#ddd;font-size:13px}
+  .controls{display:flex;gap:8px;align-items:center;margin-top:14px;flex-wrap:wrap}
+  .btn{background:#111;border:1px solid rgba(255,255,255,0.04);color:#fff;padding:8px 12px;border-radius:8px;cursor:pointer}
+  .btn:active{transform:translateY(1px)}
+  .play-big{font-size:16px;padding:10px 14px}
+  .track-list{margin-top:16px;display:flex;flex-direction:column;gap:10px}
+  .track{display:flex;align-items:center;justify-content:space-between;padding:10px;border-radius:8px;background:rgba(255,255,255,0.03)}
+  .track.playing{outline:2px solid rgba(255,255,255,0.06)}
+  .track .left{display:flex;gap:12px;align-items:center}
+  .track .num{width:30px;text-align:center;color:#ccc}
+  .track .title{font-size:14px}
+  .progress{height:8px;background:rgba(255,255,255,0.06);border-radius:6px;overflow:hidden;margin-top:12px}
+  .progress > i{display:block;height:100%;width:0%;background:linear-gradient(90deg,var(--accent),#ff8a00)}
+  small{display:block;margin-top:10px;color:#bbb;font-size:12px}
+  @media(max-width:520px){
+    .avatar{width:64px;height:64px}
+    h1{font-size:18px}
+  }
+</style>
+</head>
+<body>
+  <main class="card" role="main">
+    <header>
+      <div class="avatar" aria-hidden="true">
+        <img src="https://s3.iimg.su/s/01/gIf69VCxEcZlakaim0SAyPKSqc0lF8gVzf3nnRuW.jpg" alt="Misha Mel">
+      </div>
+      <div>
+        <h1>MISHA MEL</h1>
+        <p class="lead">Официальный мини-плеер — треки с репозитория</p>
+        <div class="controls">
+          <button id="prev" class="btn">⏮ Prev</button>
+          <button id="play" class="btn play-big">▶ Play</button>
+          <button id="next" class="btn">⏭ Next</button>
+        </div>
+      </div>
+    </header>
+
+    <div class="progress" aria-hidden="true"><i id="bar"></i></div>
+
+    <div class="track-list" id="list">
+      <!-- Сгенерируется скриптом -->
+    </div>
+
+    <audio id="player" preload="metadata"></audio>
+    <small>Файлы должны лежать в той же папке, что и этот <code>index.html</code>: <code>1.m4a</code>, <code>2.m4a</code>, <code>3.m4a</code>. После загрузки на GitHub Pages относительные пути сохранятся.</small>
+  </main>
+
+<script>
+(() => {
+  // Плейлист — относительные пути. Если файлы в корне репозитория рядом с index.html — всё ок.
+  const tracks = [
+    { title: "1. Track 1", src: "1.m4a" },
+    { title: "2. Track 2", src: "2.m4a" },
+    { title: "3. Track 3", src: "3.m4a" }
+  ];
+
+  const player = document.getElementById('player');
+  const listEl = document.getElementById('list');
+  const playBtn = document.getElementById('play');
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const bar = document.getElementById('bar');
+
+  let idx = 0;
+  let isPlaying = false;
+
+  function buildList(){
+    listEl.innerHTML = '';
+    tracks.forEach((t,i) => {
+      const el = document.createElement('div');
+      el.className = 'track' + (i === idx ? ' playing' : '');
+      el.innerHTML = `
+        <div class="left">
+          <div class="num">${i+1}</div>
+          <div class="title">${escapeHtml(t.title)}</div>
+        </div>
+        <div><button class="btn play-single" data-i="${i}">▶</button></div>
+      `;
+      listEl.appendChild(el);
+    });
+
+    // attach
+    listEl.querySelectorAll('.play-single').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        playIndex(Number(e.currentTarget.dataset.i));
+      });
+    });
+  }
+
+  function escapeHtml(s){ return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  function playIndex(i){
+    if(i < 0) i = tracks.length - 1;
+    if(i >= tracks.length) i = 0;
+    idx = i;
+    player.src = tracks[idx].src;
+    player.type = 'audio/mp4';
+    player.play().catch(()=>{ /* autoplay may require user interaction */ });
+    updateUI();
+  }
+
+  function togglePlay(){
+    if(player.src === '') { playIndex(idx); return; }
+    if(player.paused) player.play();
+    else player.pause();
+  }
+
+  function updateUI(){
+    isPlaying = !player.paused;
+    playBtn.textContent = isPlaying ? '⏸ Pause' : '▶ Play';
+    listEl.querySelectorAll('.track').forEach((el, i) => el.classList.toggle('playing', i === idx));
+  }
+
+  // controls
+  playBtn.addEventListener('click', togglePlay);
+  prevBtn.addEventListener('click', () => playIndex(idx - 1));
+  nextBtn.addEventListener('click', () => playIndex(idx + 1));
+
+  // player events
+  player.addEventListener('play', updateUI);
+  player.addEventListener('pause', updateUI);
+  player.addEventListener('ended', () => playIndex(idx + 1));
+  player.addEventListener('timeupdate', () => {
+    if(player.duration) {
+      const pct = (player.currentTime / player.duration) * 100;
+      bar.style.width = pct + '%';
+    }
+  });
+  player.addEventListener('error', (e) => {
+    console.error('Audio error', e);
+    // show simple message in console; on site you can show UI alert
+  });
+
+  // init
+  buildList();
+  // try preload first track metadata (won't autoplay)
+  player.src = tracks[0].src;
+  player.load();
+
+  // optional: keyboard shortcuts
+  document.addEventListener('keydown', (ev) => {
+    if(ev.code === 'Space'){ ev.preventDefault(); togglePlay(); }
+    if(ev.code === 'ArrowRight') playIndex(idx + 1);
+    if(ev.code === 'ArrowLeft') playIndex(idx - 1);
+  });
+})();
+</script>
+</body>
+  </html>
+  
